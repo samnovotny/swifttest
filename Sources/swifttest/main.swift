@@ -1,5 +1,9 @@
-import SwiftyGPIO
+//import SwiftyGPIO
 import Foundation
+
+internal let portString = "/dev/i2c-1"
+internal let deviceAddress = 0x48
+
 
 print("Hello, Swift world!")
 
@@ -19,10 +23,11 @@ if let Relay = gpios[.P16] {
     }
 }
 
-let adc = ADS1015()
-print("adc = \(adc.readADC(adcChannel: 1))")
+let adc = I2CIo(address: deviceAddress, device: portString)
 
 while true {
-    print("adc = \(adc.readADC(adcChannel: 1))")
+    if let value = try? adc?.readWord() {
+        print("adc = \(value)")
+    }
     Thread.sleep(forTimeInterval: 1)
 }
