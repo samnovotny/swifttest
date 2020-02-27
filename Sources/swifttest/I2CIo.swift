@@ -14,6 +14,9 @@ internal let I2C_SMBUS: UInt = 0x720
 internal let I2C_SMBUS_READ: UInt8 =   1
 internal let I2C_SMBUS_WRITE: UInt8 =  0
 
+internal let REG_CONVERT:UInt8 = 0x00
+internal let REG_CONFIG:UInt8 = 0x01
+
 private struct i2c_smbus_ioctl_data {
     var read_write: UInt8
     var command: UInt8
@@ -24,6 +27,7 @@ private struct i2c_smbus_ioctl_data {
 enum I2CError : Error {
     case ioctlError
     case writeError
+    case readError
 }
 
 class I2CIo {
@@ -38,6 +42,7 @@ class I2CIo {
     }
     
     deinit {
+        print ("\(#function)")
         close(self.fd)
     }
     
@@ -45,29 +50,40 @@ class I2CIo {
         let io = ioctl(self.fd, I2C_SLAVE, CInt(self.address))
         guard io != -1 else {throw I2CError.ioctlError}
     }
-    
-    func writeByte(byte: UInt8) throws {
+        
+    func readADC(channel: Int) throws -> Float {
+        print ("\(#function) - \(channel)", terminator: " ")
+        let delay = 0.001 // (1.0 / 1600.0) + 0.0001
+        let channels = [0x4000, 0x5000, 0x6000]
+        let config = 0x0003 | 0x0100 | 0x0080 | 0x0200 | 0x8000 | channels[channel]
+        var data = [UInt8] (repeating: 0, count: 2)
+ 
         try selectDevice()
-        var data = byte
+
+        data[0] = UInt8(config >> 8)
+        data[1] = UInt8(config & 0xff)
         var ioctlData = i2c_smbus_ioctl_data(read_write: I2C_SMBUS_WRITE,
-                                             command: 0,
+                                             command: REG_CONFIG,
                                              size: Int32(MemoryLayout.size(ofValue:data)),
                                              data: &data)
-        let io = ioctl(self.fd, I2C_SMBUS, &ioctlData)
+        var io = ioctl(self.fd, I2C_SMBUS, &ioctlData)
         guard io != -1 else {throw I2CError.writeError}
-    }
-    
-    func readWord() throws -> Int {
-        try selectDevice()
-        var word = [UInt8] (repeating: 0, count: 2)
-        var ioctlData = i2c_smbus_ioctl_data(read_write: I2C_SMBUS_READ,
-                                             command: 0,
-                                             size: Int32(MemoryLayout.size(ofValue:word)),
-                                             data: &word) 
-        let io = ioctl(self.fd, I2C_SMBUS, &ioctlData)
-        guard io != -1 else {throw I2CError.writeError}
-        let value = Int(word[1] << 8) + Int(word[0])
-        return (value)
+        
+        Thread.sleep(forTimeInterval: delay)
+
+        ioctlData = i2c_smbus_ioctl_data(read_write: I2C_SMBUS_READ,
+                                         command: REG_CONVERT,
+                                         size: Int32(MemoryLayout.size(ofValue:data)),
+                                         data: &data)
+        io = ioctl(self.fd, I2C_SMBUS, &ioctlData)
+        guard io != -1 else {throw I2CError.readError}
+
+        let intValue = Int(data[0] << 4) + Int(data[1] >> 4)
+        print( "intValue(\(intValue)) = \(intValue.binaryWord())")
+        
+        let result = Float(intValue) / 2047.0 * 4096.0 / 3.3
+        
+        return (result)
     }
 }
 

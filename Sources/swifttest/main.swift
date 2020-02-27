@@ -1,11 +1,11 @@
-//import SwiftyGPIO
+import SwiftyGPIO
 import Foundation
 
 internal let portString = "/dev/i2c-1"
 internal let deviceAddress = 0x48
 
 
-print("Hello, Swift world!")
+print ("\(#function)")
 
 let gpios = SwiftyGPIO.GPIOs(for:.RaspberryPiPlusZero)
 
@@ -13,7 +13,6 @@ let gpios = SwiftyGPIO.GPIOs(for:.RaspberryPiPlusZero)
 // Setup Relay
 //
 if let Relay = gpios[.P16] {
-    print("Relay set!")
     Relay.direction = .OUT
     DispatchQueue.global(qos: .background).async {
         while true {
@@ -26,8 +25,16 @@ if let Relay = gpios[.P16] {
 let adc = I2CIo(address: deviceAddress, device: portString)
 
 while true {
-    if let value = try? adc?.readWord() {
-        print("adc = \(value)")
+    do {
+        for n in 0...2 {
+            if let value = try adc?.readADC(channel: n) {
+                print("adc(\(n)) = \(String(format: "%0.2f", value))")
+            }
+            
+        }
     }
-    Thread.sleep(forTimeInterval: 1)
+    catch {
+        print("ADC error \(error)")
+    }
+    Thread.sleep(forTimeInterval: 5)
 }
