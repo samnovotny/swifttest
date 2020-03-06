@@ -12,6 +12,10 @@ extension Int {
         return(String(format: "%04x", self))
     }
     
+    func hex8() -> String {
+        return(String(format: "%02x", self))
+    }
+
     private func binaryN(bits: Int) -> String {
         var str = String(self, radix: 2)
         if str.count < bits {

@@ -24,17 +24,26 @@ if let Relay = gpios[.P16] {
 
 let adc = I2CIo(address: deviceAddress, device: portString)
 
-while true {
-    do {
-        for n in 0...2 {
-            if let value = try adc?.readADC(channel: n) {
-                print("adc(\(n)) = \(String(format: "%0.2f", value))")
-            }
-            
-        }
-    }
-    catch {
-        print("ADC error \(error)")
-    }
-    Thread.sleep(forTimeInterval: 5)
+do {
+    try adc?.getConfigRegister()
+//    let res = try adc?.readADC(channel: 0)
+//    print("adc(\(0)) = \(String(format: "%0.2f", res!))")
 }
+catch {
+    print("ConfigRegister error \(error)")
+}
+
+//while true {
+//    do {
+//        for n in 0...2 {
+//            if let value = try adc?.readADC(channel: n) {
+//                print("adc(\(n)) = \(String(format: "%0.2f", value))")
+//            }
+//            
+//        }
+//    }
+//    catch {
+//        print("ADC error \(error)")
+//    }
+//    Thread.sleep(forTimeInterval: 5)
+//}
